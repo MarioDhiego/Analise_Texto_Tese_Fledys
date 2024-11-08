@@ -13,6 +13,7 @@ library(wordcloud2)
 library(RColorBrewer)
 library(wesanderson)
 library(plotly)
+library(DT)
 ## -------------------------------------------------------------------------------------------------------------------------------------------#
 
 
@@ -104,28 +105,83 @@ corpus2 <- Corpus(VectorSource(Texto_P2))
 corpus3 <- Corpus(VectorSource(Texto_P3))
 
 # Pre-Processar os Textos
-#corpus2 <- tm_map(Corpus2, PlainTextDocument)             # converter o corpus documento de texto simples
+
+
+corpus1 <- tm_map(corpus1, content_transformer(tolower))  # Transformar para Minuscula
+corpus1 <- tm_map(corpus1, removePunctuation)             # Remover Pontuação
+corpus1 <- tm_map(corpus1, removeNumbers)                 # Remover Números
+corpus1 <- tm_map(corpus1, removeWords, stopwords("pt"))  # Remover Stopwords (Palavras Comuns)
+corpus1 <- tm_map(corpus1, stripWhitespace)               # Remover Espaços em Branco
+
+corpus2 <- tm_map(corpus2, content_transformer(tolower))  # Transformar para Minuscula
+corpus2 <- tm_map(corpus2, removePunctuation)             # Remover Pontuação
+corpus2 <- tm_map(corpus2, removeNumbers)                 # Remover Números
+corpus2 <- tm_map(corpus2, removeWords, stopwords("pt"))  # Remover Stopwords (Palavras Comuns)
+corpus2 <- tm_map(corpus2, stripWhitespace)               # Remover Espaços em Branco
+
+
 corpus3 <- tm_map(corpus3, content_transformer(tolower))  # Transformar para Minuscula
 corpus3 <- tm_map(corpus3, removePunctuation)             # Remover Pontuação
 corpus3 <- tm_map(corpus3, removeNumbers)                 # Remover Números
 corpus3 <- tm_map(corpus3, removeWords, stopwords("pt"))  # Remover Stopwords (Palavras Comuns)
 corpus3 <- tm_map(corpus3, stripWhitespace)               # Remover Espaços em Branco
-#corpus2 <- tm_map(Corpus2, stemDocument)                  # Sinônimos
+
 # -------------------------------------------------------------------------------------------------------------------------------------------#
 
 
 ## -------------------------------------------------------------------------------------------------------------------------------------------#
 # Juntar todos os textos processados em uma única string
+texto_final <- sapply(corpus1, function(x) as.character(x))  # Converter o conteúdo de cada documento para texto
+texto_final <- paste(texto_final, collapse = " ")           # Juntar tudo em uma única string
+
+
+texto_final <- sapply(corpus2, function(x) as.character(x))  # Converter o conteúdo de cada documento para texto
+texto_final <- paste(texto_final, collapse = " ")           # Juntar tudo em uma única string
+
 texto_final <- sapply(corpus3, function(x) as.character(x))  # Converter o conteúdo de cada documento para texto
 texto_final <- paste(texto_final, collapse = " ")           # Juntar tudo em uma única string
 
+
+
+
+
+
+
+
+
+
 # Gerar a Nuvem de Palavras
-wordcloud(words = corpus3, 
+nuvem1 <- wordcloud(words = corpus1, 
           min.freq = 1,                        # Frequência mínima de palavras a serem exibidas
           max.words = 500,                     # Número máximo de palavras a serem exibidas
           random.order = FALSE,                # Não embaralhar as palavras
           rot.per = 0.25,                      # Proporção de palavras Rotacionadas
           color = wes_palette("Darjeeling1"))  # Paleta de cores
+
+
+nuvem2 <- wordcloud(words = corpus2, 
+                    min.freq = 1,                        # Frequência mínima de palavras a serem exibidas
+                    max.words = 500,                     # Número máximo de palavras a serem exibidas
+                    random.order = FALSE,                # Não embaralhar as palavras
+                    rot.per = 0.25,                      # Proporção de palavras Rotacionadas
+                    color = wes_palette("Darjeeling1"))  # Paleta de cores
+
+
+nuvem3 <- wordcloud(words = corpus3, 
+                    min.freq = 1,                        # Frequência mínima de palavras a serem exibidas
+                    max.words = 500,                     # Número máximo de palavras a serem exibidas
+                    random.order = FALSE,                # Não embaralhar as palavras
+                    rot.per = 0.25,                      # Proporção de palavras Rotacionadas
+                    color = wes_palette("Darjeeling1"))  # Paleta de cores
+
+
+
+# Organizar as nuvens em uma tela
+gridExtra::grid.arrange(nuvem1, nuvem2, nuvem3, ncol = 3)
+
+
+
+
 ## -------------------------------------------------------------------------------------------------------------------------------------------#
 
 
@@ -149,12 +205,26 @@ wordcloud(words = corpus3,
 
 
 
+
+## -------------------------------------------------------------------------------------------------------------------------------------------#
 # Frequência das Palavras
 corpus3 <- tm_map(corpus3, stemDocument)
 word.counts <- as.matrix(TermDocumentMatrix(corpus3))
 word.freq <- sort(rowSums(word.counts), decreasing = TRUE)
+
 head(word.freq, 10)
 
+#Tabela Dinamica das Palavras
+word.freq.df <- data.frame(
+  Palavra = names(word.freq),
+  Frequência = word.freq
+)
+
+# Exibir as 10 palavras mais frequentes
+DT::datatable(freq.table, 
+              options = list(pageLength = 10, 
+                             searchHighlight = TRUE, 
+                             autoWidth = TRUE))
 
 
 
@@ -167,29 +237,31 @@ freq.table <- data.frame(
   Frequency = word.freq,
   Percent = (word.freq / total.freq) * 100
 )
+freq.table
+
+
 
 # Selecionando as 20 palavras mais frequentes
 top.words <- freq.table[1:20, ]
 
 # Criando o gráfico de barras com percentuais
-p <- ggplot(top.words, aes(x = reorder(Word, Frequency), y = Frequency)) +
-  geom_bar(stat = "identity", fill = "blue") +  # Barras
-  #coord_flip() +  # Virar o gráfico
-  labs(title = "Pergunta 3", x = "Palavra", y = "Frequências") +
+p1 <- ggplot(top.words, aes(x = reorder(Word, Frequency), y = Frequency)) +
+  geom_bar(stat = "identity", fill = "lightblue") +  # Barras
+  coord_flip() +  # Virar o gráfico
+  labs(title = "P3: Como era a Relação com Pai/Mãe? Quem Cuidava de você?",
+       x = "Palavras", 
+       y = "Frequências") +
   theme_minimal() +
-  #theme(axis.text.x = element_text(angle = 45, hjust = 1)) +  # Girando as palavras
+  theme(axis.text.x = element_text(hjust = 1)) +  # Girando as palavras
   geom_text(aes(label = paste0(round(Percent, 1), "%")), 
             hjust = -0.2, 
             color = "black", 
-            size = 3)  # Adicionando percentuais
+            size = 3)  
+ggplotly(p1)
 
-# Convertendo o gráfico ggplot para plotly
-p_plotly <- p_plotly %>% layout(
-  title = "Pergunta 3",
-  xaxis = list(title = "Palavras"),
-  yaxis = list(title = "Frequência")
-)
-p_plotly
+
+
+## -------------------------------------------------------------------------------------------------------------------------------------------#
 
 
 
